@@ -1,0 +1,30 @@
+{
+    "custbody_webstoreordernumber": "SO4734931",
+    "shipaddressee": null,
+    "shipattention": "",
+    "shipaddr1": "250 Technology Park",
+    "shipaddr2": "",
+    "shipcity": "Lake Mary",
+    "shipstate": "FL",
+    "shipzip": "32746",
+    "shipphone": null,
+    "shipcountry": "US",
+    "receivebydate": "2022-01-25T00:00:00",
+    "email": null,
+    "specialinstructions": "TEST TEST TEST",
+    "lines": [{
+        "line": 1,
+        "item": "FARO090",
+        "quantityStock": 0,
+        "quantityOrdered": 5,
+        "description": "Davis 6 Panel Cap",
+        "stock": false
+    }, {
+        "line": 2,
+        "item": "FARO091",
+        "quantityStock": 0,
+        "quantityOrdered": 1,
+        "description": "Irwin Beanie",
+        "stock": false
+    }]
+}
