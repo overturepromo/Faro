@@ -1,55 +1,37 @@
 {
-	"code": 201,
 	"custbody_webstoreordernumber": "ZZZ008",
 	"shipaddressee": "Test Company Name",
-	"shipattention": "Name Test Person",
+	"shipattention": "Test Person Name",
 	"shipaddr1": "367 Prairieview Dr",
-	"shipaddr2": "",
+	"shipaddr2":"",
 	"shipcity": "Geneva",
-	"shipstate": "Illinois",
+	"shipstate": "IL",
 	"shipzip": "60134-4618",
 	"shipphone": "(213) 123-1232",
-	"shipcountry": "United States",
-	"email": "kevind@overturepromo.com",
+	"shipcountry": "US",
 	"receivebydate": "2/2/2022",
-	"orderid": {
-		"20097": {
-			"status": "Accepted",
-			"statuscode": "2",
-			"date_add": "2022-01-06 15:45:08",
-			"date_upd": "2022-01-06 15:45:08",
-			"delivery_date": "0000-00-00 00:00:00",
-			"specialinstructions": "example instructions for warehouse",
-			"lines": [
-				{
-					"line": 1,
-					"item": "MG/CNEE/043",
-					"quantity": "5",
-					"description": "Dictionary Bulgaria"
-				},
-				{
-					"line": 2,
-					"item": "MGE/014",
-					"quantity": "5",
-					"description": "Flag Keyring - Mauritius"
-				}
-			]
+	"email": "",
+	"specialinstructions":"example instructions for warehouse",
+	"lines": [
+		{
+			"line":1,
+			"item": "MGE/014",
+			"quantity": "5",
+			"description": "example description 2"
 		},
-		"20098": {
-			"status": "Stand By for stock information",
-			"statuscode": "16",
-			"date_add": "2022-01-06 15:45:08",
-			"date_upd": "2022-01-06 15:45:08",
-			"delivery_date": "0000-00-00 00:00:00",
-			"specialinstructions": "example instructions for warehouse",
-			"lines": [
-				{
-					"line": 1,
-					"item": "MG/CNEE/039",
-					"quantity": "5",
-					"description": "Dictionary Urdu"
-				}
-			]
+		{
+			"line":2,
+			"item": "MG/CNEE/039",
+			"quantity": "5",
+			"description": "example description 2",
+			"stock": false
+		},
+		{
+			"line":3,
+			"item": "MG/CNEE/043",
+			"quantity": "5",
+			"description": "example description 2",
+			"stock": true
 		}
-	}
+	]
 }

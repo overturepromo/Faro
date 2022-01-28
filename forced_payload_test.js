@@ -162,17 +162,8 @@ function sendSO() {
 
         if(payload.lines.length > 0) {
 
-        var completePayload = JSON.stringify(payload, function(key, value) {
-                // if value is null, return "" as a replacement
-                if(value === null) {
-                    return "";
-                }
-                // otherwise, leave the value unchanged
-                return value;
-            });
-
-          rec.setFieldValue('custbody_ariba_cxml_message',JSON.stringify(payload));
-          nlapiLogExecution('AUDIT','Outbound Payload',JSON.stringify(payload));
+          rec.setFieldValue('custbody_ariba_cxml_message',JSON.stringify(payload, function (key, value) { return (value === null) ? "" : value;}));
+          nlapiLogExecution('AUDIT','Outbound Payload',JSON.stringify(payload, payload, function (key, value) { return (value === null) ? "" : value;}));
 
           // var response = nlapiRequestURL(
           //   'https://overture.crea2print.com/json/order/',
