@@ -9,21 +9,19 @@
     "shipzip": "32746",
     "shipphone": null,
     "shipcountry": "US",
-    "receivebydate": "2022-01-25T00:00:00",
+    "receivebydate": "1/25/2022",
     "email": null,
     "specialinstructions": "TEST TEST TEST",
     "lines": [{
         "line": 1,
         "item": "FARO090",
-        "quantityStock": 0,
-        "quantityOrdered": 5,
+        "quantity": 5,
         "description": "Davis 6 Panel Cap",
         "stock": false
     }, {
         "line": 2,
         "item": "FARO091",
-        "quantityStock": 0,
-        "quantityOrdered": 1,
+        "quantity": 1,
         "description": "Irwin Beanie",
         "stock": false
     }]

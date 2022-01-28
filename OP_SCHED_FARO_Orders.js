@@ -129,7 +129,7 @@ function sendSO() {
         payload.shipzip = rec.getFieldValue('shipzip');
         payload.shipphone = rec.getFieldValue('custbody_shiptophone');
         payload.shipcountry = rec.getFieldValue('shipcountry');
-        payload.receivebydate = dateConversion(rec.getFieldValue('trandate')); //This is most likely wrong
+        payload.receivebydate = rec.getFieldValue('trandate'); //This is most likely wrong
         payload.email = rec.getFieldValue('custbody_customer_email');
         payload.specialinstructions = rec.getFieldValue('memo');
         
@@ -163,7 +163,7 @@ function sendSO() {
                 {
                   line: x,
                   item: item,
-                  QtyOrdered: Number(rec.getLineItemValue('item','quantitybackordered',x)),
+                  quantity: Number(rec.getLineItemValue('item','quantitybackordered',x)),
                   description: rec.getLineItemValue('item','description',x),
                   stock: false
                 }

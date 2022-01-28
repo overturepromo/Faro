@@ -78,7 +78,7 @@ function sendSO() {
       else {
         dateDay = (dateObject.getDate()).toString();
       }
-      return dateObject.getFullYear()+'-'+dateMonth+'-'+dateDay+'T00:00:00';
+      return dateObject.getFullYear()+'-'+dateMonth+'-'+dateDay;
     };
 
     for(var i = 0; i<results.length; i++) {
@@ -130,7 +130,7 @@ function sendSO() {
         payload.shipzip = rec.getFieldValue('shipzip');
         payload.shipphone = rec.getFieldValue('custbody_shiptophone');
         payload.shipcountry = rec.getFieldValue('shipcountry');
-        payload.receivebydate = dateConversion(rec.getFieldValue('trandate'));
+        payload.receivebydate = rec.getFieldValue('trandate');
         payload.email = rec.getFieldValue('custbody_customer_email');
         payload.specialinstructions = rec.getFieldValue('memo');
         
@@ -139,6 +139,11 @@ function sendSO() {
           //Checking location 25/beligum is true
           if(rec.getLineItemValue('item', 'location', x) == 25){
             var item = rec.getLineItemText('item','item',x);
+            //checking stock
+            var stockCheck = true;
+            if(!Number(rec.getLineItemValue('item','quantitycommitted',x))){
+                stockCheck = false;
+            }
                 //check if matrix item, strip out parent item if so
             if(item.indexOf(':') !== -1) {
                 item = item.substring(item.indexOf(':')+2);
@@ -147,16 +152,24 @@ function sendSO() {
                 {
                 line: x,
                 item: item,
-                quantityStock: Number(rec.getLineItemValue('item','quantitycommitted',x)),
-                quantityOrdered: Number(rec.getLineItemValue('item','quantitybackordered',x)),
+                quantity: Number(rec.getLineItemValue('item','quantitybackordered',x)),
                 description: rec.getLineItemValue('item','description',x),
-                stock: false
+                stock: stockCheck
                 }
             );
           }
         }
 
         if(payload.lines.length > 0) {
+
+        var completePayload = JSON.stringify(payload, function(key, value) {
+                // if value is null, return "" as a replacement
+                if(value === null) {
+                    return "";
+                }
+                // otherwise, leave the value unchanged
+                return value;
+            });
 
           rec.setFieldValue('custbody_ariba_cxml_message',JSON.stringify(payload));
           nlapiLogExecution('AUDIT','Outbound Payload',JSON.stringify(payload));
