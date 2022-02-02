@@ -10,7 +10,7 @@ function sendSO() {
 	var header = {
     'Cache-Control' : 'no-cache',
 		'Content-Type' : 'application/json',
-		'Authorization':''
+		'Authorization':'ZeRuuM3HfZHJHwkG0JomklVHVbnhN7EB'
 	};
 
   //se: FARO Orders for Integration
@@ -106,9 +106,9 @@ function sendSO() {
             lines: [] 
         }
 
-        // Will We need backordered anything? Don't want to take anything out that isn't needed. 
-        // The whole difference between backordered vs out of stock is confusing. 
+        //storing backorders in an array 
         var backorderedLines = {lines:[]};
+        var backordersPresent = false;
         
         rec = nlapiLoadRecord('salesorder',results[i].getId());
         
@@ -117,7 +117,14 @@ function sendSO() {
         }
         else {
           docNumber = rec.getFieldValue('tranid');
-        }  
+        }
+        
+        //Puesdo Code
+        //Maybe check here to see if that “sent to 3rd party" box is checked.
+        // if(rec.getFieldValue('custbody_send_3rd_party') == 'T'){
+        //   //change the SO to have the BO at the end so it isn't a duplicate SO
+        //   docNumber = rec.getFieldValue('tranid')+'-BO';
+        // }
 
         payload.custbody_webstoreordernumber = rec.getFieldValue("tranid");
         payload.shipaddressee =  rec.getFieldValue("custbody_customer_name");
@@ -129,7 +136,7 @@ function sendSO() {
         payload.shipzip = rec.getFieldValue('shipzip');
         payload.shipphone = rec.getFieldValue('custbody_shiptophone');
         payload.shipcountry = rec.getFieldValue('shipcountry');
-        payload.receivebydate = rec.getFieldValue('trandate'); //This is most likely wrong
+        payload.receivebydate = rec.getFieldValue('trandate'); //This is the order date, don't see the recieve by date field.
         payload.email = rec.getFieldValue('custbody_customer_email');
         payload.specialinstructions = rec.getFieldValue('memo');
         
@@ -138,8 +145,11 @@ function sendSO() {
           //Checking location 25/beligum is true
           if(rec.getLineItemValue('item', 'location', x) == 25){
             var item = rec.getLineItemText('item','item',x);
-            //check if backordered
+            //check if in stock
             if(rec.getLineItemValue('item','quantitybackordered',x) < 1) {
+                //Puesdo code of setting the 3rd party sent checkbox to true probably not the right place. as we are in the line items 
+                //rec.setFieldValue('custbody_send_3rd_party', 'T');
+
                 //check if matrix item, strip out parent item if so
                 if(item.indexOf(':') !== -1) {
                   item = item.substring(item.indexOf(':')+2);
@@ -155,10 +165,13 @@ function sendSO() {
                 );
             }
             else {
+              backordersPresent = true;
+              
               //check if matrix item, strip out parent item if so
               if(item.indexOf(':') !== -1) {
                 item = item.substring(item.indexOf(':')+2);
               }
+              //pushing backorders into our backorders array
               backorderedLines.lines.push(
                 {
                   line: x,
@@ -174,8 +187,9 @@ function sendSO() {
 
         if(payload.lines.length > 0) {
 
-          rec.setFieldValue('custbody_ariba_cxml_message',JSON.stringify(payload));
-          nlapiLogExecution('AUDIT','Outbound Payload',JSON.stringify(payload));
+          //json callback function to make null fields to an empty string
+          rec.setFieldValue('custbody_ariba_cxml_message',JSON.stringify(payload, function (key, value) { return (value === null) ? "" : value;}));
+          nlapiLogExecution('AUDIT','Outbound Payload',JSON.stringify(payload, function (key, value) { return (value === null) ? "" : value;}));
 
           // var response = nlapiRequestURL(
           //   'https://overture.crea2print.com/json/order/',
@@ -193,13 +207,17 @@ function sendSO() {
   
           if(resCode === 200) {
 
-            rec.setFieldValue('custbody_outbound_processing_complete','T');
+
+            if(!backordersPresent){
+              //This removes it from saved search if everything is in stock so much have no backoderes lines
+              rec.setFieldValue('custbody_outbound_processing_complete','T');
+            }
   
             //if there are backordered lines
             //save them in custom field
             if(backorderedLines.lines.length > 0) {
               rec.setFieldValue('custbody_backordered_lines_pending','T');
-              rec.setFieldValue('custbody_backordered_lines_data', JSON.stringify(backorderedLines));
+              rec.setFieldValue('custbody_backordered_lines_data', JSON.stringify(backorderedLines,  function (key, value) { return (value === null) ? "" : value;}));
               rec.setFieldValue('custbody_backorder_doc_number', rec.getFieldValue('tranid')+'-BO');
             }
   
