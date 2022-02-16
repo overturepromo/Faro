@@ -4,6 +4,10 @@
  *Description: Send Orders to FARO
  */
 
+ //new notes
+ //occurred to me later: you may  need to JSON.parse() the resBody before querying it for the order ids
+//also, we never set the docNumber variable used in the error email, so that'll fail until we set it
+
 function sendSO() {
 
 	//define header object for nlapiRequestURL() call
@@ -28,7 +32,7 @@ function sendSO() {
 
 				try{
 					
-					var script = nlapiScheduleScript('customscript_op_sched_ddk100auorders');
+					var script = nlapiScheduleScript('customscript_op_sched_faro_orders');
 
           if(script == 'QUEUED') {
             nlapiLogExecution('ERROR','Re-scheduling due to governance', 'Successful re-schedule.');
@@ -51,83 +55,37 @@ function sendSO() {
 
 		};
 
-    //check if ALL of the items are backordered
-    var allBackordered = function(rec) {
-      for(var i=1; i<=rec.getLineItemCount('item'); i++) {
-        if(rec.getLineItemValue('item','quantitycommitted',i) > 0) {
-          return false;
-        }
-      }
-      return true;
-    };
-
-    var dateConversion = function(date) {
-      //convert date to YYYY-MM-DDT00:00:00
-      var dateObject = nlapiStringToDate(date);
-      var dateMonth = null;
-      var dateDay = null;
-      if((dateObject.getMonth()+1).toString().length < 2) {
-        dateMonth = '0'+(dateObject.getMonth()+1).toString();
-      }
-      else {
-        dateMonth = (dateObject.getMonth()+1).toString();
-      }
-      if((dateObject.getDate()).toString().length < 2) {
-        dateDay = '0'+(dateObject.getDate()).toString();
-      }
-      else {
-        dateDay = (dateObject.getDate()).toString();
-      }
-      return dateObject.getFullYear()+'-'+dateMonth+'-'+dateDay+'T00:00:00';
-    };
-
     for(var i = 0; i<results.length; i++) {
 
       try {
 
-        var rec = null;
-        var docNumber = null;
-
-        // remove propertie quotes
+        //            tranid: '',
         var payload = { 
-            custbody_webstoreordernumber: "",
-            shipaddressee: "", 
-            shipattention: "",
-            shipaddr1: "",
-            shipaddr2: "",
-            shipcity: "", 
-            shipstate: "",
-            shipzip: "",
-            shipphone: "",
-            shipcountry: "",
-            receivebydate: "",
-            email: "",
-            specialinstructions: "",
+            custbody_webstoreordernumber: '',
+            tranid: '',
+	          internalid: '',
+            shipaddressee: '', 
+            shipattention: '',
+            shipaddr1: '',
+            shipaddr2: '',
+            shipcity: '', 
+            shipstate: '',
+            shipzip: '',
+            shipphone: '',
+            shipcountry: '',
+            receivebydate: '',
+            email: '',
+            specialinstructions: '',
             lines: [] 
         }
 
-        //storing backorders in an array 
-        var backorderedLines = {lines:[]};
-        var backordersPresent = false;
-        
-        rec = nlapiLoadRecord('salesorder',results[i].getId());
-        
-        if(allBackordered(rec)) {
-          docNumber = rec.getFieldValue('tranid')+'-BO';
-        }
-        else {
-          docNumber = rec.getFieldValue('tranid');
-        }
-        
-        //Puesdo Code
-        //Maybe check here to see if that “sent to 3rd party" box is checked.
-        // if(rec.getFieldValue('custbody_send_3rd_party') == 'T'){
-        //   //change the SO to have the BO at the end so it isn't a duplicate SO
-        //   docNumber = rec.getFieldValue('tranid')+'-BO';
-        // }
+        var rec = nlapiLoadRecord('salesorder',results[i].getValue('internalid',null,'GROUP'));
+        var tranId = rec.getFieldValue('tranid');
 
-        payload.custbody_webstoreordernumber = rec.getFieldValue("tranid");
-        payload.shipaddressee =  rec.getFieldValue("custbody_customer_name");
+        payload.custbody_webstoreordernumber = rec.getFieldValue('otherrefnum');
+        payload.tranid = rec.getFieldValue('tranid');
+        payload.internalid = rec.getId();
+        payload.shipaddressee =  rec.getFieldValue('shipaddressee');
         payload.shipattention = rec.getFieldValue('shipattention');
         payload.shipaddr1 = rec.getFieldValue('shipaddr1')
         payload.shipaddr2 = rec.getFieldValue('shipaddr2')
@@ -136,106 +94,122 @@ function sendSO() {
         payload.shipzip = rec.getFieldValue('shipzip');
         payload.shipphone = rec.getFieldValue('custbody_shiptophone');
         payload.shipcountry = rec.getFieldValue('shipcountry');
-        payload.receivebydate = rec.getFieldValue('trandate'); //This is the order date, don't see the recieve by date field.
+        payload.receivebydate = rec.getFieldValue('enddate'); 
         payload.email = rec.getFieldValue('custbody_customer_email');
-        payload.specialinstructions = rec.getFieldValue('memo');
+        payload.specialinstructions = rec.getFieldValue('custbody_special_instructions');
         
+        var backordersPresent = false;
+        var modifyTranId = false;
+
+        var lineItemCount = 1
 
         for(var x=1; x<=rec.getLineItemCount('item'); x++) {
-          //Checking location 25/beligum is true
+          //Checking location 25/Belgium is true
           if(rec.getLineItemValue('item', 'location', x) == 25){
             var item = rec.getLineItemText('item','item',x);
             //check if in stock
             if(rec.getLineItemValue('item','quantitybackordered',x) < 1) {
-                //Puesdo code of setting the 3rd party sent checkbox to true probably not the right place. as we are in the line items 
-                //rec.setFieldValue('custbody_send_3rd_party', 'T');
-
-                //check if matrix item, strip out parent item if so
-                if(item.indexOf(':') !== -1) {
-                  item = item.substring(item.indexOf(':')+2);
-                }
-                payload.lines.push(
-                  {
-                    line: x,
-                    item: item,
-                    quantity: Number(rec.getLineItemValue('item','quantitycommitted',x)),
-                    description: rec.getLineItemValue('item','discription',x),
-                    stock: true
-                  }
-                );
-            }
-            else {
-              backordersPresent = true;
-              
+                
               //check if matrix item, strip out parent item if so
               if(item.indexOf(':') !== -1) {
                 item = item.substring(item.indexOf(':')+2);
               }
-              //pushing backorders into our backorders array
-              backorderedLines.lines.push(
-                {
-                  line: x,
-                  item: item,
-                  quantity: Number(rec.getLineItemValue('item','quantitybackordered',x)),
-                  description: rec.getLineItemValue('item','description',x),
-                  stock: false
-                }
-              );
+
+              if(rec.getLineItemValue('item','custcol_3rd_party_order_id',x) == '' || rec.getLineItemValue('item','custcol_3rd_party_order_id',x) == null) {
+                payload.lines.push(
+                  {
+                    line: lineItemCount,
+                    item: item,
+                    quantity: Number(rec.getLineItemValue('item','quantitycommitted',x)),
+                    description: rec.getLineItemValue('item','description',x)
+                  }
+                );
+                lineItemCount++;
+              }
+              else {
+                modifyTranId = true;
+              }  
+            }
+            else {
+              backordersPresent = true;
             }
           }
         }
 
         if(payload.lines.length > 0) {
 
-          //json callback function to make null fields to an empty string
-          rec.setFieldValue('custbody_ariba_cxml_message',JSON.stringify(payload, function (key, value) { return (value === null) ? "" : value;}));
-          nlapiLogExecution('AUDIT','Outbound Payload',JSON.stringify(payload, function (key, value) { return (value === null) ? "" : value;}));
+          // if(modifyTranId) {
+          //   payload.tranid = rec.getFieldValue('tranid')+'-BO';
+          // }
+          // else {
+          //   payload.tranid = rec.getFieldValue('tranid');
+          // }
 
-          // var response = nlapiRequestURL(
-          //   'https://overture.crea2print.com/json/order/',
-          //   JSON.stringify(payload),
-          //   header,
-          //   null,
-          //   'POST'
-          // );
+          //force feeding product to be something in their stystem for testing.
+          //payload.lines[0].item = 'FARO091';
+
+          //json callback function to make null fields to an empty string
+          rec.setFieldValue('custbody_ariba_cxml_message',JSON.stringify(payload, function (key, value) { return (value === null) ? '' : value;}));
+          nlapiLogExecution('AUDIT','Outbound Payload',JSON.stringify(payload, function (key, value) { return (value === null) ? '' : value;}));
+
+
+
+          var response = nlapiRequestURL(
+            'https://overture.crea2print.com/json/order/',//may need to remove last /
+            JSON.stringify(payload, function (key, value) { return (value === null) ? '' : value;}),
+            header,
+            null,
+            'POST'
+          );
+
+          var fullResponse = JSON.stringify(response);
   
           var resCode = response.getCode();
           var resBody = response.getBody();
+          var resBodyJson = JSON.parse(resBody);
           var resString = resCode+'\n'+JSON.stringify(resBody);
   
-          nlapiLogExecution('AUDIT','WMS Response',resString);
+          nlapiLogExecution('AUDIT','FARO Response',resBody);
+
   
-          if(resCode === 200) {
+          if(resCode === 201) {
 
+            var orderIdObj = resBodyJson.orderid;
+            var newOrderId = Object.keys(orderIdObj)[0];
 
-            if(!backordersPresent){
-              //This removes it from saved search if everything is in stock so much have no backoderes lines
-              rec.setFieldValue('custbody_outbound_processing_complete','T');
+            //set FARO's orderid in new custom line field custcol_3rd_party_order_id
+            for(var x=1; x<=rec.getLineItemCount('item'); x++) {
+              if(rec.getLineItemValue('item', 'location', x) == 25){
+                if(rec.getLineItemValue('item','quantitybackordered',x) < 1) {
+                  if(rec.getLineItemValue('item','custcol_3rd_party_order_id',x) == '' || rec.getLineItemValue('item','custcol_3rd_party_order_id',x) == null) {
+                    rec.setLineItemValue('item','custcol_3rd_party_order_id', x, newOrderId);
+                  }
+                }
+              }
             }
-  
-            //if there are backordered lines
-            //save them in custom field
-            if(backorderedLines.lines.length > 0) {
-              rec.setFieldValue('custbody_backordered_lines_pending','T');
-              rec.setFieldValue('custbody_backordered_lines_data', JSON.stringify(backorderedLines,  function (key, value) { return (value === null) ? "" : value;}));
-              rec.setFieldValue('custbody_backorder_doc_number', rec.getFieldValue('tranid')+'-BO');
+
+            if(!backordersPresent) {
+
+              //This removes it from saved search if everything is in stock so much have no backoderes lines
+              //rec.setFieldValue('custbody_outbound_processing_complete','T');
+
             }
   
             nlapiSubmitRecord(rec);
-            nlapiLogExecution('AUDIT','SUCCESS',rec.getFieldValue('tranid')+' created successfully in WMS');
+            nlapiLogExecution('AUDIT','SUCCESS',rec.getFieldValue('tranid')+' created successfully in FAROs system');
 
           }
   
           //else if errors are present, log them and email jacobg@overturepromo.com or kevind@overturepromo.com
           else {
   
-            nlapiLogExecution('ERROR','WMS Error',response.toString());
+            nlapiLogExecution('ERROR','FARO Error',resString);
   
             nlapiSendEmail(
-              '6',
+              '5009366',
               'jacobg@overturepromo.com',
-              'WMS Faro Error '+docNumber,
-              docNumber+'\r\n'+resString,
+              'FARO Error '+ tranId,
+              tranId+'\r\n'+resString,
               null,
               null,
               null,
@@ -246,16 +220,6 @@ function sendSO() {
             nlapiSubmitRecord(rec);
   
           }
-        }
-        //if no payload.items, all items are backordered
-        else {
-          rec.setFieldValue('custbody_backordered_lines_pending','T');
-          rec.setFieldValue('custbody_backordered_lines_data', JSON.stringify(backorderedLines));
-          rec.setFieldValue('custbody_backorder_doc_number', rec.getFieldValue('tranid')+'-BO');
-
-          nlapiSubmitRecord(rec);
-          nlapiLogExecution('AUDIT','All backorder order NOT sent.',rec.getFieldValue('tranid'));
-
         }
 
         if(i % 10 == 0) {
@@ -269,7 +233,7 @@ function sendSO() {
         var error = e.code+' :: '+e.message;
         nlapiLogExecution('ERROR','Try / Catch Error',error);
         nlapiSendEmail(
-          '6',
+          '5009366',
           'jacobg@overturepromo.com',
           'Faro Error Main Try/Catch Error',
           error.toString(),

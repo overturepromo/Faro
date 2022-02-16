@@ -1,6 +1,6 @@
 {
-    "custbody_webstoreordernumber": "SO4734931",
-    "shipaddressee": "",
+    "custbody_webstoreordernumber": "FARO12345",
+    "shipaddressee": "FARO Technologies, Inc - FARO – APACDB",
     "shipattention": "",
     "shipaddr1": "250 Technology Park",
     "shipaddr2": "",
@@ -9,20 +9,13 @@
     "shipzip": "32746",
     "shipphone": "",
     "shipcountry": "US",
-    "receivebydate": "1/25/2022",
-    "email": "",
+    "receivebydate": "2/21/2022",
+    "email": "jacobg@overturepromo.com",
     "specialinstructions": "TEST TEST TEST",
     "lines": [{
         "line": 1,
-        "item": "FARO090",
-        "quantity": 5,
-        "description": "Davis 6 Panel Cap",
-        "stock": false
-    }, {
-        "line": 2,
         "item": "FARO091",
         "quantity": 1,
-        "description": "Irwin Beanie",
-        "stock": false
+        "description": "Irwin Beanie"
     }]
 }
