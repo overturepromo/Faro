@@ -4,10 +4,6 @@
  *Description: Send Orders to FARO
  */
 
- //new notes
- //occurred to me later: you may  need to JSON.parse() the resBody before querying it for the order ids
-//also, we never set the docNumber variable used in the error email, so that'll fail until we set it
-
 function sendSO() {
 
 	//define header object for nlapiRequestURL() call
@@ -18,7 +14,6 @@ function sendSO() {
 	};
 
   //se: FARO Orders for Integration
-  //Update to Production search
 	var results = nlapiSearchRecord('salesorder','customsearch5105');
 
 	if(results) {
@@ -59,7 +54,6 @@ function sendSO() {
 
       try {
 
-        //            tranid: '',
         var payload = { 
             custbody_webstoreordernumber: '',
             tranid: '',
@@ -98,7 +92,6 @@ function sendSO() {
         payload.email = rec.getFieldValue('custbody_customer_email');
         payload.specialinstructions = rec.getFieldValue('custbody_special_instructions');
         
-        var backordersPresent = false;
         var modifyTranId = false;
 
         var lineItemCount = 1
@@ -108,13 +101,13 @@ function sendSO() {
           if(rec.getLineItemValue('item', 'location', x) == 25){
             var item = rec.getLineItemText('item','item',x);
             //check if in stock
-            if(rec.getLineItemValue('item','quantitybackordered',x) < 1) {
+            if((rec.getLineItemValue('item','quantitybackordered',x) < 1 && rec.getLineItemValue('item','quantitycommitted',x) > 0) || rec.getLineItemValue('item', 'quantityfulfilled', x) > 0) {
                 
               //check if matrix item, strip out parent item if so
               if(item.indexOf(':') !== -1) {
                 item = item.substring(item.indexOf(':')+2);
               }
-
+              //Check to see if item has been given an order id
               if(rec.getLineItemValue('item','custcol_3rd_party_order_id',x) == '' || rec.getLineItemValue('item','custcol_3rd_party_order_id',x) == null) {
                 payload.lines.push(
                   {
@@ -130,23 +123,25 @@ function sendSO() {
                 modifyTranId = true;
               }  
             }
-            else {
-              backordersPresent = true;
-            }
           }
         }
 
         if(payload.lines.length > 0) {
 
-          // if(modifyTranId) {
-          //   payload.tranid = rec.getFieldValue('tranid')+'-BO';
-          // }
-          // else {
-          //   payload.tranid = rec.getFieldValue('tranid');
-          // }
-
-          //force feeding product to be something in their stystem for testing.
-          //payload.lines[0].item = 'FARO091';
+          if(modifyTranId) {
+            var boNum = rec.getFieldValue('custbody_backorder_doc_number');
+            if(boNum){
+              tranId = tranId +'-BO' + (boNum + 1);
+              payload.tranid = tranId;
+            } else{
+              tranId = tranId + '-BO';
+              payload.tranid = tranId;
+            }
+            rec.setFieldValue('custbody_backorder_doc_number', boNum+1); 
+          }
+          else {
+            payload.tranid = tranId;
+          }
 
           //json callback function to make null fields to an empty string
           rec.setFieldValue('custbody_ariba_cxml_message',JSON.stringify(payload, function (key, value) { return (value === null) ? '' : value;}));
@@ -175,7 +170,9 @@ function sendSO() {
           if(resCode === 201) {
 
             var orderIdObj = resBodyJson.orderid;
-            var newOrderId = Object.keys(orderIdObj)[0];
+            var orderIdLength = Object.keys(orderIdObj).length;
+            var newOrderId = Object.keys(orderIdObj)[orderIdLength-1];
+            // var newOrderId = Object.keys(orderIdObj)[0];
 
             //set FARO's orderid in new custom line field custcol_3rd_party_order_id
             for(var x=1; x<=rec.getLineItemCount('item'); x++) {
@@ -187,16 +184,9 @@ function sendSO() {
                 }
               }
             }
-
-            if(!backordersPresent) {
-
-              //This removes it from saved search if everything is in stock so much have no backoderes lines
-              //rec.setFieldValue('custbody_outbound_processing_complete','T');
-
-            }
   
             nlapiSubmitRecord(rec);
-            nlapiLogExecution('AUDIT','SUCCESS',rec.getFieldValue('tranid')+' created successfully in FAROs system');
+            nlapiLogExecution('AUDIT','SUCCESS', tranId +' created successfully in FAROs system');
 
           }
   

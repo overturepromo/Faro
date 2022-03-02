@@ -5,22 +5,7 @@
  */
 
 function createRecord() {
-  /*
-    KEVIN:
-    GOAL: Your GOAL is to determine which lines on these orders have been shipped - and fulfill those lines in Netsuite with tracking.
-    Steps:
-    Loop through results of saved search
-    for each order:
-      send GET call with orderId of the order
-      loop through response lines from FARO
-        loop through lines on fulfillment record
-          when you match FARO's line to the Netsuite line
-            check if status is shipped
-            if so: check the fulfill checkbox on that line, and store the tracking number somewhere
-      
-      after you've looped through everything, add the tracking number(s) to the fulfillment record and save it.
-  */
-  
+
     var header = {
       'Cache-Control' : 'no-cache',
       'Content-Type' : 'application/json',
@@ -28,7 +13,6 @@ function createRecord() {
     };
   
   
-    //Test orders arn't in the serach anymore. We have a couple live orders though now
     var results = nlapiSearchRecord('salesorder','customsearch5105');
   
     if(results) {
@@ -74,8 +58,6 @@ function createRecord() {
           //SO internal id
           var internalId = rec.getId();
   
-          //KEVIN: we're storing their orderid at the line level in custcol_3rd_party_order_id. But, if they return all lines when you use internalid, we can just use that instead.
-
           //Build array of unique order ids
           var orderIds = [];
           var prevId = null;
@@ -114,7 +96,7 @@ function createRecord() {
                 var carrierName = resBodyJson.orderid[orderIds[j].toString()].carrier_name;
                 var shippingNumber = resBodyJson.orderid[orderIds[j].toString()].shipping_number;
                 var stopBug = 'stop';
-                //check status to see if its' 4 or 5
+                //check status to see if order is shipped
                 if(shippedStatus == 4 || shippedStatus == 5){
                   var fulfillRecord = nlapiTransformRecord('salesorder', internalId, 'itemfulfillment');
                   fulfillRecord.setFieldText('shipstatus','Shipped');
