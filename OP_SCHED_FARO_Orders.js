@@ -107,7 +107,7 @@ function sendSO() {
               if(item.indexOf(':') !== -1) {
                 item = item.substring(item.indexOf(':')+2);
               }
-              //Check to see if item has been given an order id
+
               if(rec.getLineItemValue('item','custcol_3rd_party_order_id',x) == '' || rec.getLineItemValue('item','custcol_3rd_party_order_id',x) == null) {
                 payload.lines.push(
                   {
@@ -131,13 +131,14 @@ function sendSO() {
           if(modifyTranId) {
             var boNum = rec.getFieldValue('custbody_backorder_doc_number');
             if(boNum){
-              tranId = tranId +'-BO' + (boNum + 1);
+              boNum = Number(boNum)+1;
+              tranId = tranId +'-BO' + boNum;
               payload.tranid = tranId;
             } else{
               tranId = tranId + '-BO';
               payload.tranid = tranId;
             }
-            rec.setFieldValue('custbody_backorder_doc_number', boNum+1); 
+            rec.setFieldValue('custbody_backorder_doc_number', Number(boNum)+1); 
           }
           else {
             payload.tranid = tranId;
